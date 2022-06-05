@@ -13,20 +13,21 @@ if __name__ == "__main__":
     print("\nEnter one of the environments 'trial' or 'experiment':")
     choice1=input()
     if choice1=='trial':
+        print("\nTrial is Loading:")
         builder = create_builder(exp_version='trial',condition='tutorial')
     else:
         print("\nEnter one of the robot adaptation styles 'baseline', 'trust', 'workload', or 'performance':")
         choice2=input()
 
         #PAY ATTENTION
-        if choice2=='trust' or choice2=='workload' or choice2=='performance':
+        if choice2=='trust' or choice2=='workload' or choice2=='performance' or choice2=="baseline":
             print("\nMake sure to add your agents to the agents folder, starting baseline now..")
             print()
             print()
             print()
-            builder = create_builder(exp_version=choice1,condition="baseline")
-        else:
             builder = create_builder(exp_version=choice1,condition=choice2)
+        else:
+            print("WRONG NAME ENTERED")
 
     # Start overarching MATRX scripts and threads, such as the api and/or visualizer if requested. Here we also link our
     # own media resource folder with MATRX.

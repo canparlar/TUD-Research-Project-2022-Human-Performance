@@ -15,6 +15,7 @@ from matrx.objects import EnvObject
 from matrx.world_builder import RandomProperty
 from matrx.goals import WorldGoal
 from agents1.BaselineAgent import BaselineAgent
+from agents1.PerformanceAgent import PerformanceAgent
 from agents1.TutorialAgent import TutorialAgent
 from actions1.customActions import RemoveObjectTogether
 from brains1.HumanBrain import HumanBrain
@@ -82,6 +83,8 @@ def add_agents(builder, condition, exp_version):
         for agent_nr in range(nr_agents):
             if exp_version=="experiment" and condition=="baseline":
                 brain = BaselineAgent(slowdown=8)
+            if exp_version == "experiment" and condition == "performance":
+                brain = PerformanceAgent(slowdown=8)
             if exp_version=="trial" and condition=="tutorial":
                 brain = TutorialAgent(slowdown=8)
 
