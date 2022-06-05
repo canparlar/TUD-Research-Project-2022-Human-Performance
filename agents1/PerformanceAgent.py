@@ -109,6 +109,7 @@ class PerformanceAgent(BW4TBrain):
         self._searchTookLong = 0
         self._reminder = True
         self._performanceMetric = 0
+        self._progressMessage = ""
 
     def initialize(self):
         self._state_tracker = StateTracker(agent_id=self.agent_id)
@@ -177,7 +178,9 @@ class PerformanceAgent(BW4TBrain):
         for info in state.values():
             if 'is_human_agent' in info and 'Human' in info['name'] and self._waitingHuman and self._complySpeed != 0:
                 self._waitingHuman = False
-                print("Comply Speed: " + str(self._second - self._complySpeed))
+                self._sendMessage(
+                    'Your performance comply speed is ' + str(self._second - self._complySpeed), 'RescueBot')
+                #print("Comply Speed: " + str(self._second - self._complySpeed))
                 if (self._second - self._complySpeed) > 15:
                     self._complySpeed = 800
                     self._lateComply += 1
@@ -187,7 +190,8 @@ class PerformanceAgent(BW4TBrain):
 
             if 'is_human_agent' in info and 'Human' in info['name'] and len(info['is_carrying']) > 0 and 'critical' in \
                     info['is_carrying'][0]['obj_id']:
-                self._collectedVictims.append(info['is_carrying'][0]['img_name'][8:-4])
+                if info['is_carrying'][0]['img_name'][8:-4] not in self._collectedVictims:
+                    self._collectedVictims.append(info['is_carrying'][0]['img_name'][8:-4])
                 self._carryingTogether = True
             if 'is_human_agent' in info and 'Human' in info['name'] and len(info['is_carrying']) == 0:
                 self._carryingTogether = False
@@ -202,17 +206,28 @@ class PerformanceAgent(BW4TBrain):
         self._processMessages(state, self._teamMembers)
         # Update trust beliefs for team members
         # self._trustBlief(self._teamMembers, receivedMessages)
-
-        #heeeeeeeeeeeeeeeeeeeeeyyyyyyyyyyyy
+        if self._second < 1:
+            predictedScore = 0
+        else:
+            predictedScore = round(((480/self._second)*state['rescuebot']['score']), 0)
+        progressMessagesGood = ["", "", "", " We are doing great! Continuing like this, we will probably complete the mission with " + str(predictedScore) + "/36 point(s), because we have " + str(round((480 - self._second)/60, 1)) + " minute(s) left and " + str(len(self._collectedVictims)) + " victim(s) rescued."]
+        progressMessagesBad = [" We should be a little faster! Continuing like this, we will probably complete the mission with " + str(predictedScore) + "/36 point(s), because we have " + str(round((480 - self._second)/60, 1)) + " minute(s) left and " + str(8-len(self._collectedVictims)) + " victim(s) to rescue.", " It is not recommended to reject high confidence suggestions, because it will likely decrease our performance.", "", ""]
+        self._sendMessage(
+            'Your performance gap is ' + str(self._second/480 - state['rescuebot']['score']/36), 'RescueBot')
         #print("Performance Gap: " + str(self._second/480 - state['rescuebot']['score']/36))
         if (self._second/480 - state['rescuebot']['score']/36) >= 0.20:
             self._performanceMetric = 3
+            self._progressMessage = progressMessagesBad[random.randint(0, 3)]
         elif (self._second/480 - state['rescuebot']['score']/36) >= 0.133333:
             self._performanceMetric = 2
+            self._progressMessage = progressMessagesBad[random.randint(0, 3)]
         elif (self._second/480 - state['rescuebot']['score']/36) >= 0.066666:
             self._performanceMetric = 1
+            self._progressMessage = progressMessagesGood[random.randint(0, 3)]
         else:
             self._performanceMetric = 0
+            self._progressMessage = progressMessagesGood[random.randint(0, 3)]
+
 
         # CRUCIAL TO NOT REMOVE 3 LINES BELOW!
         self._sendMessage('Our score is ' + str(state['rescuebot']['score']) + '.', 'RescueBot')
@@ -415,7 +430,7 @@ class PerformanceAgent(BW4TBrain):
                             else:
                                 responseString = ", please inform me quickly this time, since I am waiting for your response."
                             self._sendMessage('Found rock blocking ' + str(self._door['room_name']) + '. \
-                                I suggest to continue searching instead of removing rock' + messages[self._performanceMetric] + ' Select your decision using the buttons "Remove" or "Continue"' + responseString,
+                                I suggest to continue searching instead of removing rock' + messages[self._performanceMetric] + self._progressMessage + ' Select your decision using the buttons "Remove" or "Continue"' + responseString,
                                               'RescueBot')
                             self._suggestion = ['Continue']
                             self._waiting = True
@@ -434,7 +449,7 @@ class PerformanceAgent(BW4TBrain):
                             else:
                                 responseString = ", please inform me quickly this time, since I am waiting for your response."
                             self._sendMessage('Found rock blocking  ' + str(self._door['room_name']) + '. \
-                                I suggest to continue searching instead of removing rock' + messages[self._performanceMetric] + ' Select your decision using the buttons "Remove" or "Continue"' + responseString,
+                                I suggest to continue searching instead of removing rock' + messages[self._performanceMetric] + self._progressMessage + ' Select your decision using the buttons "Remove" or "Continue"' + responseString,
                                               'RescueBot')
                             self._suggestion = ['Continue']
                             self._waiting = True
@@ -456,7 +471,7 @@ class PerformanceAgent(BW4TBrain):
                             else:
                                 responseString = ", please inform me quickly this time, since I am waiting for your response."
                             self._sendMessage('Found rock blocking  ' + str(self._door['room_name']) + '.  \
-                                I suggest to remove rock instead of continue searching' + messages[self._performanceMetric] + ' Select your decision using the buttons "Remove" or "Continue"' + responseString,
+                                I suggest to remove rock instead of continue searching' + messages[self._performanceMetric] + self._progressMessage + ' Select your decision using the buttons "Remove" or "Continue"' + responseString,
                                               'RescueBot')
                             self._suggestion = ['Remove']
                             self._waiting = True
@@ -475,7 +490,7 @@ class PerformanceAgent(BW4TBrain):
                             else:
                                 responseString = ", please inform me quickly this time, since I am waiting for your response."
                             self._sendMessage('Found rock blocking  ' + str(self._door['room_name']) + '.  \
-                                I suggest to remove rock instead of continue searching' + messages[self._performanceMetric] + ' Select your decision using the buttons "Remove" or "Continue"' + responseString,
+                                I suggest to remove rock instead of continue searching' + messages[self._performanceMetric] + self._progressMessage + ' Select your decision using the buttons "Remove" or "Continue"' + responseString,
                                               'RescueBot')
                             self._suggestion = ['Remove']
                             self._waiting = True
@@ -494,7 +509,7 @@ class PerformanceAgent(BW4TBrain):
                             else:
                                 responseString = ", please inform me quickly this time, since I am waiting for your response."
                             self._sendMessage('Found rock blocking  ' + str(self._door['room_name']) + '.  \
-                                I suggest to continue searching instead of removing rock' + messages[self._performanceMetric] + ' Select your decision using the buttons "Remove" or "Continue"' + responseString,
+                                I suggest to continue searching instead of removing rock' + messages[self._performanceMetric] + self._progressMessage + ' Select your decision using the buttons "Remove" or "Continue"' + responseString,
                                               'RescueBot')
                             self._suggestion = ['Continue']
                             self._waiting = True
@@ -511,7 +526,7 @@ class PerformanceAgent(BW4TBrain):
                             else:
                                 responseString = ", please inform me quickly this time, since I am waiting for your response."
                             self._sendMessage('Found rock blocking  ' + str(self._door['room_name']) + '.  \
-                                I suggest to continue searching instead of removing rock' + messages[self._performanceMetric] + ' Select your decision using the buttons "Remove" or "Continue"' + responseString,
+                                I suggest to continue searching instead of removing rock' + messages[self._performanceMetric] + self._progressMessage + ' Select your decision using the buttons "Remove" or "Continue"' + responseString,
                                               'RescueBot')
                             self._suggestion = ['Continue']
                             self._waiting = True
@@ -530,7 +545,7 @@ class PerformanceAgent(BW4TBrain):
                             else:
                                 responseString = ", please inform me quickly this time, since I am waiting for your response."
                             self._sendMessage('Found rock blocking  ' + str(self._door['room_name']) + '.  \
-                                I suggest to remove rock instead of continue searching' + messages[self._performanceMetric] + ' Select your decision using the buttons "Remove" or "Continue"' + responseString,
+                                I suggest to remove rock instead of continue searching' + messages[self._performanceMetric] + self._progressMessage + ' Select your decision using the buttons "Remove" or "Continue"' + responseString,
                                               'RescueBot')
                             self._suggestion = ['Remove']
                             self._waiting = True
@@ -549,7 +564,7 @@ class PerformanceAgent(BW4TBrain):
                             else:
                                 responseString = ", please inform me quickly this time, since I am waiting for your response."
                             self._sendMessage('Found rock blocking  ' + str(self._door['room_name']) + '.  \
-                                I suggest to remove rock instead of continue searching' + messages[self._performanceMetric] + ' Select your decision using the buttons "Remove" or "Continue"' + responseString,
+                                I suggest to remove rock instead of continue searching' + messages[self._performanceMetric] + self._progressMessage + ' Select your decision using the buttons "Remove" or "Continue"' + responseString,
                                               'RescueBot')
                             self._suggestion = ['Remove']
                             self._waiting = True
@@ -564,8 +579,11 @@ class PerformanceAgent(BW4TBrain):
                                 self._updateTrust(positiveExperience=True)
                             self._noSuggestions += 1
                             self._answered = True
-                            print("Response Time: " + str(((state['World']['tick_duration'] *
-                                                            state['World']['nr_ticks']) - self._responseSpeed)))
+                            self._sendMessage(
+            'Your performance response time is ' + str(((state['World']['tick_duration'] *
+                                                            state['World']['nr_ticks']) - self._responseSpeed)), 'RescueBot')
+                            #print("Response Time: " + str(((state['World']['tick_duration'] *
+                            #                               state['World']['nr_ticks']) - self._responseSpeed)))
                             if ((state['World']['tick_duration'] * state['World']['nr_ticks']) - self._responseSpeed)\
                                     > 8.5:
                                 self._lateResponse += 1
@@ -586,8 +604,12 @@ class PerformanceAgent(BW4TBrain):
                                     self._updateTrust(positiveExperience=True)
                                 self._noSuggestions += 1
                                 self._answered = True
-                            print("Response Time: " + str(((state['World']['tick_duration'] *
-                                                            state['World']['nr_ticks']) - self._responseSpeed)))
+                            self._sendMessage(
+                                'Your performance response time is ' + str(((state['World']['tick_duration'] *
+                                                                 state['World']['nr_ticks']) - self._responseSpeed)),
+                                'RescueBot')
+                            #print("Response Time: " + str(((state['World']['tick_duration'] *
+                            #                                state['World']['nr_ticks']) - self._responseSpeed)))
                             if ((state['World']['tick_duration'] * state['World']['nr_ticks']) - self._responseSpeed) \
                                     > 8.5:
                                 self._lateResponse += 1
@@ -602,14 +624,14 @@ class PerformanceAgent(BW4TBrain):
                                         'RescueBot')
                                 elif self._lateComply == 1:
                                     self._sendMessage(
-                                        'Please come to ' + str(self._door['room_name']) + 'to remove rock, a bit '
+                                        'Please come to ' + str(self._door['room_name']) + ' to remove rock, a bit '
                                                                                            'faster than last time, '
                                                                                            'because we lost important '
                                                                                            'time then.',
                                         'RescueBot')
                                 else:
                                     self._sendMessage(
-                                        'Please come to ' + str(self._door['room_name']) + 'to remove rock. You have '
+                                        'Please come to ' + str(self._door['room_name']) + ' to remove rock. You have '
                                                                                            'to be quicker this time, '
                                                                                            'because I am waiting for '
                                                                                            'you.',
@@ -638,7 +660,7 @@ class PerformanceAgent(BW4TBrain):
                             else:
                                 responseString = ", please inform me quickly this time, since I am waiting for your response."
                             self._sendMessage('Found tree blocking  ' + str(self._door['room_name']) + '.  \
-                                I suggest to remove tree instead of continue searching' + messages[self._performanceMetric] + ' Select your decision using the buttons "Remove" or "Continue"' + responseString,
+                                I suggest to remove tree instead of continue searching' + messages[self._performanceMetric] + self._progressMessage + ' Select your decision using the buttons "Remove" or "Continue"' + responseString,
                                               'RescueBot')
                             self._suggestion = ['Remove']
                             self._waiting = True
@@ -655,7 +677,7 @@ class PerformanceAgent(BW4TBrain):
                             else:
                                 responseString = ", please inform me quickly this time, since I am waiting for your response."
                             self._sendMessage('Found tree blocking  ' + str(self._door['room_name']) + '.  \
-                                I suggest to remove tree instead of continue searching' + messages[self._performanceMetric] + ' Select your decision using the buttons "Remove" or "Continue"' + responseString,
+                                I suggest to remove tree instead of continue searching' + messages[self._performanceMetric] + self._progressMessage + ' Select your decision using the buttons "Remove" or "Continue"' + responseString,
                                               'RescueBot')
                             self._suggestion = ['Remove']
                             self._waiting = True
@@ -674,7 +696,7 @@ class PerformanceAgent(BW4TBrain):
                             else:
                                 responseString = ", please inform me quickly this time, since I am waiting for your response."
                             self._sendMessage('Found tree blocking  ' + str(self._door['room_name']) + '.  \
-                                I suggest to continue searching instead of removing tree' + messages[self._performanceMetric] + ' Select your decision using the buttons "Remove" or "Continue"' + responseString,
+                                I suggest to continue searching instead of removing tree' + messages[self._performanceMetric] + self._progressMessage + ' Select your decision using the buttons "Remove" or "Continue"' + responseString,
                                               'RescueBot')
                             self._suggestion = ['Continue']
                             self._waiting = True
@@ -693,7 +715,7 @@ class PerformanceAgent(BW4TBrain):
                             else:
                                 responseString = ", please inform me quickly this time, since I am waiting for your response."
                             self._sendMessage('Found tree blocking  ' + str(self._door['room_name']) + '.  \
-                                I suggest to continue searching instead of removing tree' + messages[self._performanceMetric] + ' Select your decision using the buttons "Remove" or "Continue"' + responseString,
+                                I suggest to continue searching instead of removing tree' + messages[self._performanceMetric] + self._progressMessage + ' Select your decision using the buttons "Remove" or "Continue"' + responseString,
                                               'RescueBot')
                             self._suggestion = ['Continue']
                             self._waiting = True
@@ -708,8 +730,12 @@ class PerformanceAgent(BW4TBrain):
                                 self._updateTrust(positiveExperience=True)
                             self._noSuggestions += 1
                             self._answered = True
-                            print("Response Time: " + str(((state['World']['tick_duration'] *
-                                                            state['World']['nr_ticks']) - self._responseSpeed)))
+                            self._sendMessage(
+                                'Your performance response time is ' + str(((state['World']['tick_duration'] *
+                                                                 state['World']['nr_ticks']) - self._responseSpeed)),
+                                'RescueBot')
+                            #print("Response Time: " + str(((state['World']['tick_duration'] *
+                            #                               state['World']['nr_ticks']) - self._responseSpeed)))
                             if ((state['World']['tick_duration'] * state['World']['nr_ticks']) - self._responseSpeed) \
                                     > 8.5:
                                 self._lateResponse += 1
@@ -730,8 +756,13 @@ class PerformanceAgent(BW4TBrain):
                                     self._updateTrust(positiveExperience=True)
                                 self._noSuggestions += 1
                                 self._answered = True
-                                print("Response Time: " + str(((state['World']['tick_duration'] *
-                                                                state['World']['nr_ticks']) - self._responseSpeed)))
+                                self._sendMessage(
+                                    'Your performance response time is ' + str(((state['World']['tick_duration'] *
+                                                                     state['World'][
+                                                                         'nr_ticks']) - self._responseSpeed)),
+                                    'RescueBot')
+                                #print("Response Time: " + str(((state['World']['tick_duration'] *
+                                #                                state['World']['nr_ticks']) - self._responseSpeed)))
                                 if ((state['World']['tick_duration'] * state['World'][
                                     'nr_ticks']) - self._responseSpeed) \
                                         > 13:
@@ -768,7 +799,7 @@ class PerformanceAgent(BW4TBrain):
                                         ': 5/9 rescuers would decide the same, because we have around ' + str(round((
                                                                                                                             480 - self._second) / 60)) + ' minutes left. If we had found more than 1 critical victim, I would have suggested to remove alone. If the distance between us had been small, I would have suggested to remove together.']
                             self._sendMessage('Found stones blocking  ' + str(self._door['room_name']) + '.  \
-                                I suggest to continue searching instead of removing stones' + messages[self._performanceMetric] + ' Select your decision using the buttons "Continue", "Remove alone" or "Remove together"' + responseString,
+                                I suggest to continue searching instead of removing stones' + messages[self._performanceMetric] + self._progressMessage + ' Select your decision using the buttons "Continue", "Remove alone" or "Remove together"' + responseString,
                                               'RescueBot')
                             self._suggestion = ['Continue']
                             self._waiting = True
@@ -782,7 +813,7 @@ class PerformanceAgent(BW4TBrain):
                                             self._criticalFound) + ' critical ' + self._vicString + '. If the distance between us had been small, I would have suggested to remove together. If we had found less than 2 critical victims, I would have suggested to continue searching.']
                             self._sendMessage('Found stones blocking  ' + str(self._door['room_name']) + '.  \
                                 I suggest to remove stones alone instead of continue searching or removing together' +
-                                              messages[self._performanceMetric] + ' Select your decision using the buttons "Continue", "Remove alone" or "Remove together"' + responseString,
+                                              messages[self._performanceMetric] + self._progressMessage + ' Select your decision using the buttons "Continue", "Remove alone" or "Remove together"' + responseString,
                                               'RescueBot')
                             self._suggestion = ['Remove alone']
                             self._waiting = True
@@ -795,7 +826,7 @@ class PerformanceAgent(BW4TBrain):
                                         ': 7/9 rescuers would decide the same, because we found ' + str(
                                             self._criticalFound) + ' critical ' + self._vicString + '. If we had found more than 1 critical victim, I would have suggested to remove alone. If the distance between us had been small, and we had more than 4 minutes left or found more than 1 critical victim, I would have suggested to remove together.']
                             self._sendMessage('Found stones blocking  ' + str(self._door['room_name']) + '.  \
-                                I suggest to continue searching instead of removing stones' + messages[self._performanceMetric] + ' Select your decision using the buttons "Continue", "Remove alone" or "Remove together"' + responseString,
+                                I suggest to continue searching instead of removing stones' + messages[self._performanceMetric] + self._progressMessage + ' Select your decision using the buttons "Continue", "Remove alone" or "Remove together"' + responseString,
                                               'RescueBot')
                             self._suggestion = ['Continue']
                             self._waiting = True
@@ -809,7 +840,7 @@ class PerformanceAgent(BW4TBrain):
                                                                                                                             480 - self._second) / 60)) + ' minutes left and the distance between us is large. If the distance between us had been small, I would have suggested to remove together. If we had found less than 2 critical victims, I would have suggested to continue searching.']
                             self._sendMessage('Found stones blocking  ' + str(self._door['room_name']) + '.  \
                                 I suggest to remove stones alone instead of continue searching or removing together' +
-                                              messages[self._performanceMetric] + ' Select your decision using the buttons "Continue", "Remove alone" or "Remove together"' + responseString,
+                                              messages[self._performanceMetric] + self._progressMessage + ' Select your decision using the buttons "Continue", "Remove alone" or "Remove together"' + responseString,
                                               'RescueBot')
                             self._suggestion = ['Remove alone']
                             self._waiting = True
@@ -822,7 +853,7 @@ class PerformanceAgent(BW4TBrain):
                                         ': 8/9 rescuers would decide the same, because we found ' + str(
                                             self._criticalFound) + ' critical ' + self._vicString + '. If the distance between us had been large and we had found more than 1 critical victim, I would have suggested to remove alone.']
                             self._sendMessage('Found stones blocking  ' + str(self._door['room_name']) + '.  \
-                                I suggest to remove stones together or to continue searching' + messages[self._performanceMetric] + ' Select your decision using the buttons "Continue", "Remove alone" or "Remove together"' + responseString,
+                                I suggest to remove stones together or to continue searching' + messages[self._performanceMetric] + self._progressMessage + ' Select your decision using the buttons "Continue", "Remove alone" or "Remove together"' + responseString,
                                               'RescueBot')
                             self._suggestion = ['Remove together', 'Continue']
                             self._waiting = True
@@ -834,7 +865,7 @@ class PerformanceAgent(BW4TBrain):
                                         ': 6/9 rescuers would decide the same, because the distance between us is small and removing together only takes around 3 seconds. If the distance between us had been large, I would have suggested to remove alone. If we had found less than 2 critical victims, I would have suggested to continue searching.']
                             self._sendMessage('Found stones blocking  ' + str(self._door['room_name']) + '.  \
                                 I suggest to remove stones together instead of continue searching or removing alone' +
-                                              messages[self._performanceMetric] + ' Select your decision using the buttons "Continue", "Remove alone" or "Remove together"' + responseString,
+                                              messages[self._performanceMetric] + self._progressMessage + ' Select your decision using the buttons "Continue", "Remove alone" or "Remove together"' + responseString,
                                               'RescueBot')
                             self._suggestion = ['Remove together']
                             self._waiting = True
@@ -847,7 +878,7 @@ class PerformanceAgent(BW4TBrain):
                                         ': 5/9 rescuers would decide the same, because we found ' + str(
                                             self._criticalFound) + ' critical ' + self._vicString + '. If the distance between us had been large and we had found more than 1 critical victim, I would have suggested to remove alone. If we had found more than 1 critical victim, I would have suggested to remove together.']
                             self._sendMessage('Found stones blocking  ' + str(self._door['room_name']) + '.  \
-                                I suggest to continue searching instead of removing stones' + messages[self._performanceMetric] + ' Select your decision using the buttons "Continue", "Remove alone" or "Remove together"' + responseString,
+                                I suggest to continue searching instead of removing stones' + messages[self._performanceMetric] + self._progressMessage + ' Select your decision using the buttons "Continue", "Remove alone" or "Remove together"' + responseString,
                                               'RescueBot')
                             self._suggestion = ['Continue']
                             self._waiting = True
@@ -859,7 +890,7 @@ class PerformanceAgent(BW4TBrain):
                                         ': 7/9 rescuers would decide the same, because the distance between us is small. If the distance between us had been large, I would have suggested to remove alone. If we had found less than 2 critical victims, I would have suggested to continue searching.']
                             self._sendMessage('Found stones blocking  ' + str(self._door['room_name']) + '.  \
                                 I suggest to remove stones together instead of continue searching or removing alone' +
-                                              messages[self._performanceMetric] + ' Select your decision using the buttons "Continue", "Remove alone" or "Remove together"' + responseString,
+                                              messages[self._performanceMetric] + self._progressMessage + ' Select your decision using the buttons "Continue", "Remove alone" or "Remove together"' + responseString,
                                               'RescueBot')
                             self._suggestion = ['Remove together']
                             self._waiting = True
@@ -874,8 +905,12 @@ class PerformanceAgent(BW4TBrain):
                                 self._updateTrust(positiveExperience=True)
                             self._noSuggestions += 1
                             self._answered = True
-                            print("Response Time: " + str(((state['World']['tick_duration'] *
-                                                            state['World']['nr_ticks']) - self._responseSpeed)))
+                            self._sendMessage(
+                                'Your performance response time is ' + str(((state['World']['tick_duration'] *
+                                                                 state['World']['nr_ticks']) - self._responseSpeed)),
+                                'RescueBot')
+                            #print("Response Time: " + str(((state['World']['tick_duration'] *
+                            #                                state['World']['nr_ticks']) - self._responseSpeed)))
                             if ((state['World']['tick_duration'] * state['World']['nr_ticks']) - self._responseSpeed) \
                                     > 8.5:
                                 self._lateResponse += 1
@@ -895,8 +930,13 @@ class PerformanceAgent(BW4TBrain):
                                 self._updateTrust(positiveExperience=True)
                             self._noSuggestions += 1
                             self._answered = True
-                            print("Response Time: " + str(((state['World']['tick_duration'] *
-                                                            state['World']['nr_ticks']) - self._responseSpeed)))
+                            self._sendMessage(
+                                'Your performance response time is ' + str(((state['World']['tick_duration'] *
+                                                                             state['World'][
+                                                                                 'nr_ticks']) - self._responseSpeed)),
+                                'RescueBot')
+                            #print("Response Time: " + str(((state['World']['tick_duration'] *
+                            #                                state['World']['nr_ticks']) - self._responseSpeed)))
                             if ((state['World']['tick_duration'] * state['World']['nr_ticks']) - self._responseSpeed) \
                                     > 8.5:
                                 self._lateResponse += 1
@@ -918,8 +958,13 @@ class PerformanceAgent(BW4TBrain):
                                     self._updateTrust(positiveExperience=True)
                                 self._noSuggestions += 1
                                 self._answered = True
-                            print("Response Time: " + str(((state['World']['tick_duration'] *
-                                                            state['World']['nr_ticks']) - self._responseSpeed)))
+                            self._sendMessage(
+                                'Your performance response time is ' + str(((state['World']['tick_duration'] *
+                                                                             state['World'][
+                                                                                 'nr_ticks']) - self._responseSpeed)),
+                                'RescueBot')
+                            #print("Response Time: " + str(((state['World']['tick_duration'] *
+                            #                                state['World']['nr_ticks']) - self._responseSpeed)))
                             if ((state['World']['tick_duration'] * state['World']['nr_ticks']) - self._responseSpeed) \
                                     > 8.5:
                                 self._lateResponse += 1
@@ -936,14 +981,14 @@ class PerformanceAgent(BW4TBrain):
                                 elif self._lateComply == 1:
                                     self._sendMessage(
                                         'Please come to ' + str(
-                                            self._door['room_name']) + 'to remove stones together, a bit '
+                                            self._door['room_name']) + ' to remove stones together, a bit '
                                                                        'faster than last time, '
                                                                        'because we lost important '
                                                                        'time then.',
                                         'RescueBot')
                                 else:
                                     self._sendMessage(
-                                        'Please come to ' + str(self._door['room_name']) + 'to remove stones together.'
+                                        'Please come to ' + str(self._door['room_name']) + ' to remove stones together.'
                                                                                            ' You have '
                                                                                            'to be quicker this time, '
                                                                                            'because I am waiting for '
@@ -1046,7 +1091,7 @@ class PerformanceAgent(BW4TBrain):
                                                 ': 5/9 rescuers would decide the same, because we only rescued ' + str(
                                                     self._criticalFound) + ' critical ' + self._vicString2 + '. If we had rescued  more than 1 critical victim, I would have suggested to rescue ' + vic + '.']
                                     self._sendMessage('Found ' + vic + ' in ' + self._door['room_name'] + '. \
-                                        I suggest to continue searching instead of rescuing ' + vic + messages[self._performanceMetric] + ' Select your decision using the buttons "Rescue" or "Continue"' + responseString,
+                                        I suggest to continue searching instead of rescuing ' + vic + messages[self._performanceMetric] + self._progressMessage + ' Select your decision using the buttons "Rescue" or "Continue"' + responseString,
                                                       'RescueBot')
                                     self._suggestion = ['Continue']
                                     self._waiting = True
@@ -1061,7 +1106,7 @@ class PerformanceAgent(BW4TBrain):
                                                     round((
                                                                   480 - self._second) / 60)) + ' minutes left and the distance to the drop zone is small. If we had rescued less than 2 critical victims, I would have suggested to continue searching.']
                                     self._sendMessage('Found ' + vic + ' in ' + self._door['room_name'] + '. \
-                                        I suggest to rescue ' + vic + ' instead of continue searching' + messages[self._performanceMetric] + ' Select your decision using the buttons "Rescue" or "Continue"' + responseString,
+                                        I suggest to rescue ' + vic + ' instead of continue searching' + messages[self._performanceMetric] + self._progressMessage + ' Select your decision using the buttons "Rescue" or "Continue"' + responseString,
                                                       'RescueBot')
                                     self._suggestion = ['Rescue']
                                     self._waiting = True
@@ -1074,7 +1119,7 @@ class PerformanceAgent(BW4TBrain):
                                                 ': 8/9 rescuers would decide the same, because we only rescued ' + str(
                                                     self._criticalFound) + ' critical ' + self._vicString2 + '. If we had rescued  more than 1 critical victim, I would have suggested to rescue ' + vic + '.']
                                     self._sendMessage('Found ' + vic + ' in ' + self._door['room_name'] + '. \
-                                        I suggest to continue searching instead of rescuing ' + vic + messages[self._performanceMetric] + ' Select your decision using the buttons "Rescue" or "Continue"' + responseString,
+                                        I suggest to continue searching instead of rescuing ' + vic + messages[self._performanceMetric] + self._progressMessage + ' Select your decision using the buttons "Rescue" or "Continue"' + responseString,
                                                       'RescueBot')
                                     self._suggestion = ['Continue']
                                     self._waiting = True
@@ -1087,7 +1132,7 @@ class PerformanceAgent(BW4TBrain):
                                                 ': 7/9 rescuers would decide the same, because we already rescued ' + str(
                                                     self._criticalFound) + ' critical ' + self._vicString2 + '. If we had rescued less than 2 critical victims, I would have suggested to continue searching.']
                                     self._sendMessage('Found ' + vic + ' in ' + self._door['room_name'] + '. \
-                                        I suggest to rescue ' + vic + ' instead of continue searching' + messages[self._performanceMetric] + ' Select your decision using the buttons "Rescue" or "Continue"' + responseString,
+                                        I suggest to rescue ' + vic + ' instead of continue searching' + messages[self._performanceMetric] + self._progressMessage + ' Select your decision using the buttons "Rescue" or "Continue"' + responseString,
                                                       'RescueBot')
                                     self._suggestion = ['Rescue']
                                     self._waiting = True
@@ -1100,7 +1145,7 @@ class PerformanceAgent(BW4TBrain):
                                                 ': 5/9 rescuers would decide the same, because we only rescued ' + str(
                                                     self._criticalFound) + ' critical ' + self._vicString2 + '. If we had rescued  more than 1 critical victim, I would have suggested to rescue ' + vic + '.']
                                     self._sendMessage('Found ' + vic + ' in ' + self._door['room_name'] + '. \
-                                        I suggest to continue searching instead of rescuing ' + vic + messages[self._performanceMetric] + ' Select your decision using the buttons "Rescue" or "Continue"' + responseString,
+                                        I suggest to continue searching instead of rescuing ' + vic + messages[self._performanceMetric] + self._progressMessage + ' Select your decision using the buttons "Rescue" or "Continue"' + responseString,
                                                       'RescueBot')
                                     self._suggestion = ['Continue']
                                     self._waiting = True
@@ -1114,7 +1159,7 @@ class PerformanceAgent(BW4TBrain):
                                                     round((
                                                                   480 - self._second) / 60)) + ' minutes left. If we had rescued less than 2 critical victims, I would have suggested to continue searching.']
                                     self._sendMessage('Found ' + vic + ' in ' + self._door['room_name'] + '. \
-                                        I suggest to rescue ' + vic + ' instead of continue searching' + messages[self._performanceMetric] + ' Select your decision using the buttons "Rescue" or "Continue"' + responseString,
+                                        I suggest to rescue ' + vic + ' instead of continue searching' + messages[self._performanceMetric] + self._progressMessage + ' Select your decision using the buttons "Rescue" or "Continue"' + responseString,
                                                       'RescueBot')
                                     self._suggestion = ['Rescue']
                                     self._waiting = True
@@ -1127,7 +1172,7 @@ class PerformanceAgent(BW4TBrain):
                                                 ': 7/9 rescuers would decide the same, because we only rescued ' + str(
                                                     self._criticalFound) + ' critical ' + self._vicString2 + '. If we had rescued  more than 1 critical victim, I would have suggested to rescue ' + vic + '.']
                                     self._sendMessage('Found ' + vic + ' in ' + self._door['room_name'] + '. \
-                                        I suggest to continue searching instead of rescuing ' + vic + messages[self._performanceMetric] + ' Select your decision using the buttons "Rescue" or "Continue"' + responseString,
+                                        I suggest to continue searching instead of rescuing ' + vic + messages[self._performanceMetric] + self._progressMessage + ' Select your decision using the buttons "Rescue" or "Continue"' + responseString,
                                                       'RescueBot')
                                     self._suggestion = ['Continue']
                                     self._waiting = True
@@ -1143,7 +1188,7 @@ class PerformanceAgent(BW4TBrain):
                                                     round((
                                                                   480 - self._second) / 60)) + ' minutes left. If we had rescued less than 2 critical victims, I would have suggested to continue searching.']
                                     self._sendMessage('Found ' + vic + ' in ' + self._door['room_name'] + '. \
-                                        I suggest to rescue ' + vic + ' instead of continue searching' + messages[self._performanceMetric] + ' Select your decision using the buttons "Rescue" or "Continue"' + responseString,
+                                        I suggest to rescue ' + vic + ' instead of continue searching' + messages[self._performanceMetric] + self._progressMessage + ' Select your decision using the buttons "Rescue" or "Continue"' + responseString,
                                                       'RescueBot')
                                     self._suggestion = ['Rescue']
                                     self._waiting = True
@@ -1155,7 +1200,7 @@ class PerformanceAgent(BW4TBrain):
                                     if (self._performanceMetric == 3):
                                         self._performanceMetric = 2
                                     self._sendMessage('Found ' + vic + ' in ' + self._door['room_name'] + '. \
-                                        I suggest to rescue ' + vic + ' instead of continue searching' + messages[self._performanceMetric] + ' Select your decision using the buttons "Rescue" or "Continue"' + responseString,
+                                        I suggest to rescue ' + vic + ' instead of continue searching' + messages[self._performanceMetric] + self._progressMessage + ' Select your decision using the buttons "Rescue" or "Continue"' + responseString,
                                                       'RescueBot')
                                     self._suggestion = ['Rescue']
                                     self._waiting = True
@@ -1168,7 +1213,7 @@ class PerformanceAgent(BW4TBrain):
                                     if (self._performanceMetric == 3):
                                         self._performanceMetric = 2
                                     self._sendMessage('Found ' + vic + ' in ' + self._door['room_name'] + '. \
-                                        I suggest to rescue ' + vic + ' instead of continue searching' + messages[self._performanceMetric] + ' Select your decision using the buttons "Rescue" or "Continue"' + responseString,
+                                        I suggest to rescue ' + vic + ' instead of continue searching' + messages[self._performanceMetric] + self._progressMessage + ' Select your decision using the buttons "Rescue" or "Continue"' + responseString,
                                                       'RescueBot')
                                     self._suggestion = ['Rescue']
                                     self._waiting = True
@@ -1180,7 +1225,7 @@ class PerformanceAgent(BW4TBrain):
                                     if (self._performanceMetric == 3):
                                         self._performanceMetric = 2
                                     self._sendMessage('Found ' + vic + ' in ' + self._door['room_name'] + '. \
-                                        I suggest to rescue ' + vic + ' instead of continue searching' + messages[self._performanceMetric] + ' Select your decision using the buttons "Rescue" or "Continue"' + responseString,
+                                        I suggest to rescue ' + vic + ' instead of continue searching' + messages[self._performanceMetric] + self._progressMessage + ' Select your decision using the buttons "Rescue" or "Continue"' + responseString,
                                                       'RescueBot')
                                     self._suggestion = ['Rescue']
                                     self._waiting = True
@@ -1193,7 +1238,7 @@ class PerformanceAgent(BW4TBrain):
                                     if (self._performanceMetric == 3):
                                         self._performanceMetric = 2
                                     self._sendMessage('Found ' + vic + ' in ' + self._door['room_name'] + '. \
-                                        I suggest to rescue ' + vic + ' instead of continue searching' + messages[self._performanceMetric] + ' Select your decision using the buttons "Rescue" or "Continue"' + responseString,
+                                        I suggest to rescue ' + vic + ' instead of continue searching' + messages[self._performanceMetric] + self._progressMessage + ' Select your decision using the buttons "Rescue" or "Continue"' + responseString,
                                                       'RescueBot')
                                     self._suggestion = ['Rescue']
                                     self._waiting = True
@@ -1205,7 +1250,7 @@ class PerformanceAgent(BW4TBrain):
                                     if (self._performanceMetric == 3):
                                         self._performanceMetric = 2
                                     self._sendMessage('Found ' + vic + ' in ' + self._door['room_name'] + '. \
-                                        I suggest to rescue ' + vic + ' instead of continue searching' + messages[self._performanceMetric] + ' Select your decision using the buttons "Rescue" or "Continue"' + responseString,
+                                        I suggest to rescue ' + vic + ' instead of continue searching' + messages[self._performanceMetric] + self._progressMessage + ' Select your decision using the buttons "Rescue" or "Continue"' + responseString,
                                                       'RescueBot')
                                     self._suggestion = ['Rescue']
                                     self._waiting = True
@@ -1217,7 +1262,7 @@ class PerformanceAgent(BW4TBrain):
                                     if (self._performanceMetric == 3):
                                         self._performanceMetric = 2
                                     self._sendMessage('Found ' + vic + ' in ' + self._door['room_name'] + '. \
-                                        I suggest to rescue ' + vic + ' instead of continue searching' + messages[self._performanceMetric] + ' Select your decision using the buttons "Rescue" or "Continue"' + responseString,
+                                        I suggest to rescue ' + vic + ' instead of continue searching' + messages[self._performanceMetric] + self._progressMessage + ' Select your decision using the buttons "Rescue" or "Continue"' + responseString,
                                                       'RescueBot')
                                     self._suggestion = ['Rescue']
                                     self._waiting = True
@@ -1230,7 +1275,7 @@ class PerformanceAgent(BW4TBrain):
                                     if (self._performanceMetric == 3):
                                         self._performanceMetric = 2
                                     self._sendMessage('Found ' + vic + ' in ' + self._door['room_name'] + '. \
-                                        I suggest to rescue ' + vic + ' instead of continue searching' + messages[self._performanceMetric] + ' Select your decision using the buttons "Rescue" or "Continue"' + responseString,
+                                        I suggest to rescue ' + vic + ' instead of continue searching' + messages[self._performanceMetric] + self._progressMessage + ' Select your decision using the buttons "Rescue" or "Continue"' + responseString,
                                                       'RescueBot')
                                     self._suggestion = ['Rescue']
                                     self._waiting = True
@@ -1243,7 +1288,7 @@ class PerformanceAgent(BW4TBrain):
                                     if (self._performanceMetric == 3):
                                         self._performanceMetric = 2
                                     self._sendMessage('Found ' + vic + ' in ' + self._door['room_name'] + '. \
-                                        I suggest to rescue ' + vic + ' instead of continue searching' + messages[self._performanceMetric] + ' Select your decision using the buttons "Rescue" or "Continue"' + responseString,
+                                        I suggest to rescue ' + vic + ' instead of continue searching' + messages[self._performanceMetric] + self._progressMessage + ' Select your decision using the buttons "Rescue" or "Continue"' + responseString,
                                                       'RescueBot')
                                     self._suggestion = ['Rescue']
                                     self._waiting = True
@@ -1271,8 +1316,13 @@ class PerformanceAgent(BW4TBrain):
                         self._updateTrust(positiveExperience=True)
                     self._noSuggestions += 1
                     self._answered = True
-                    print("Response Time: " + str(((state['World']['tick_duration'] *
-                                                    state['World']['nr_ticks']) - self._responseSpeed)))
+                    self._sendMessage(
+                        'Your performance response time is ' + str(((state['World']['tick_duration'] *
+                                                                     state['World'][
+                                                                         'nr_ticks']) - self._responseSpeed)),
+                        'RescueBot')
+                    #print("Response Time: " + str(((state['World']['tick_duration'] *
+                    #                                state['World']['nr_ticks']) - self._responseSpeed)))
                     if ((state['World']['tick_duration'] * state['World']['nr_ticks']) - self._responseSpeed) \
                             > 8.5:
                         self._lateResponse += 1
@@ -1309,8 +1359,13 @@ class PerformanceAgent(BW4TBrain):
                         self._updateTrust(positiveExperience=True)
                     self._noSuggestions += 1
                     self._answered = True
-                    print("Response Time: " + str(((state['World']['tick_duration'] *
-                                                    state['World']['nr_ticks']) - self._responseSpeed)))
+                    self._sendMessage(
+                        'Your performance response time is ' + str(((state['World']['tick_duration'] *
+                                                                     state['World'][
+                                                                         'nr_ticks']) - self._responseSpeed)),
+                        'RescueBot')
+                    #print("Response Time: " + str(((state['World']['tick_duration'] *
+                    #                                state['World']['nr_ticks']) - self._responseSpeed)))
                     if ((state['World']['tick_duration'] * state['World']['nr_ticks']) - self._responseSpeed) \
                             > 8.5:
                         self._lateResponse += 1
@@ -1460,7 +1515,10 @@ class PerformanceAgent(BW4TBrain):
                         if ((state['World']['tick_duration'] * state['World']['nr_ticks']) - self._searchSpeed) > 68:
                             self._reminder = True
                             self._searchTookLong += 1
-                            print("Search Took Long Count: " + str(self._searchTookLong))
+                            self._sendMessage(
+                                'Your performance search took long is ' + str(self._searchTookLong),
+                                'RescueBot')
+                            #print("Search Took Long Count: " + str(self._searchTookLong))
                         else:
                             self._reminder = False
                         self._searchSpeed = (state['World']['tick_duration'] * state['World']['nr_ticks'])
@@ -1482,7 +1540,10 @@ class PerformanceAgent(BW4TBrain):
                     if ((state['World']['tick_duration'] * state['World']['nr_ticks']) - self._searchSpeed) > 68:
                         self._reminder = True
                         self._searchTookLong += 1
-                        print("Search Took Long Count: " + str(self._searchTookLong))
+                        self._sendMessage(
+                            'Your performance search took long is ' + str(self._searchTookLong),
+                            'RescueBot')
+                        #print("Search Took Long Count: " + str(self._searchTookLong))
                     else:
                         self._reminder = False
                     self._searchSpeed = (state['World']['tick_duration'] * state['World']['nr_ticks'])
@@ -1504,7 +1565,10 @@ class PerformanceAgent(BW4TBrain):
                     if ((state['World']['tick_duration'] * state['World']['nr_ticks']) - self._searchSpeed) > 68:
                         self._reminder = True
                         self._searchTookLong += 1
-                        print("Search Took Long Count: " + str(self._searchTookLong))
+                        self._sendMessage(
+                            'Your performance search took long is ' + str(self._searchTookLong),
+                            'RescueBot')
+                        #print("Search Took Long Count: " + str(self._searchTookLong))
                     else:
                         self._reminder = False
                     self._searchSpeed = (state['World']['tick_duration'] * state['World']['nr_ticks'])
@@ -1574,11 +1638,11 @@ class PerformanceAgent(BW4TBrain):
     def _sendMessage(self, mssg, sender):
         msg = Message(content=mssg, from_id=sender)
 
-        if (('Moving to ' not in msg.content and 'Delivered ' not in msg.content and 'Picking up ' not in msg.content) or (msg.content[0:len(msg.content) - (len(self._reminderMessage)+2)] not in self._sendMessages)):
+        if (('Moving to ' not in msg.content and 'Delivered ' not in msg.content and 'Picking up ' not in msg.content) or (msg.content[0:len(msg.content) - (len(self._reminderMessage))] not in self._sendMessages)):
             if msg.content not in self.received_messages_content and 'Our score is' not in msg.content:
                 self.send_message(msg)
                 if ('Moving to ' in msg.content or 'Delivered ' in msg.content or 'Picking up ' in msg.content):
-                    self._sendMessages.append((msg.content[0:len(msg.content) - (len(self._reminderMessage) + 2)]))
+                    self._sendMessages.append((msg.content[0:len(msg.content) - (len(self._reminderMessage))]))
                 else:
                     self._sendMessages.append(msg.content)
 
