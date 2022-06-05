@@ -166,7 +166,7 @@ class PerformanceAgent(BW4TBrain):
 
         self._second = state['World']['tick_duration'] * state['World']['nr_ticks']
 
-        if (self._responseSpeed != 800) and ((self._second - self._responseSpeed) > 10.5):
+        if (self._responseSpeed != 800) and ((self._second - self._responseSpeed) > 11):
             if self._lateResponse <= 0:
                 self._sendMessage("I am still waiting for an answer from you in order to proceed.", 'RescueBot')
             elif self._lateResponse == 1:
@@ -363,7 +363,7 @@ class PerformanceAgent(BW4TBrain):
                 else:
                     self._state_tracker.update(state)
                     if self._second > 8 and (self._reminder or (
-                            ((state['World']['tick_duration'] * state['World']['nr_ticks']) - self._searchSpeed) > 68)):
+                            ((state['World']['tick_duration'] * state['World']['nr_ticks']) - self._searchSpeed) > 63)):
                         reminderMessages = [
                             " Do not forget to inform me about the areas you will search (or have searched), because this improves our performance.",
                             " To complete the mission successfully, we have to be a little faster and communicate efficiently.",
@@ -372,8 +372,8 @@ class PerformanceAgent(BW4TBrain):
                     elif self._second <= 8:
                         self._reminderMessage = ""
                     else:
-                        reminderMessages = ["", " You are fast! Tip: Do not forget water slows you down.",
-                                            " We are doing great! Tip: You can see the blocks next to you, so two steps inside a room shows you the whole room.",
+                        reminderMessages = ["", " You are fast! Tip: Do not forget to avoid water, because it slows you down.",
+                                            " We are doing great! Tip: Do not forget you can search a room with only two steps forward, because you can also see the blocks next to you.",
                                             " We are doing great!", " You are fast!", ""]
                         self._reminderMessage = reminderMessages[random.randint(0, 5)]
                     if self._goalVic in self._foundVictims and str(self._door['room_name']) == \
@@ -1385,22 +1385,8 @@ class PerformanceAgent(BW4TBrain):
 
             if Phase.PLAN_PATH_TO_VICTIM == self._phase:
                 if 'mild' in self._goalVic:
-                    if self._second > 8 and (self._reminder or (
-                            ((state['World']['tick_duration'] * state['World']['nr_ticks']) - self._searchSpeed) > 68)):
-                        reminderMessages = [
-                            " Do not forget to inform me about the areas you will search (or have searched), because this improves our performance.",
-                            " To complete the mission successfully, we have to be a little faster and communicate efficiently.",
-                            " Do not forget to keep me informed me about where you will search / who you found / who you will rescue, because this greatly improves efficiency."]
-                        self._reminderMessage = reminderMessages[random.randint(0, 2)]
-                    elif self._second <= 8:
-                        self._reminderMessage = ""
-                    else:
-                        reminderMessages = ["", " You are fast! Tip: Do not forget water slows you down.",
-                                            " We are doing great! Tip: You can see the blocks next to you, so two steps inside a room shows you the whole room.",
-                                            " We are doing great!", " You are fast!", ""]
-                        self._reminderMessage = reminderMessages[random.randint(0, 5)]
                     self._sendMessage(
-                        'Picking up ' + self._goalVic + ' in ' + self._foundVictimLocs[self._goalVic]['room'] + '.'  + self._reminderMessage,
+                        'Picking up ' + self._goalVic + ' in ' + self._foundVictimLocs[self._goalVic]['room'] + '.',
                         'RescueBot')
                 self._navigator.reset_full()
                 self._navigator.add_waypoints([self._foundVictimLocs[self._goalVic]['location']])
@@ -1459,21 +1445,7 @@ class PerformanceAgent(BW4TBrain):
 
             if Phase.DROP_VICTIM == self._phase:
                 if 'mild' in self._goalVic:
-                    if self._second > 8 and (self._reminder or (
-                            ((state['World']['tick_duration'] * state['World']['nr_ticks']) - self._searchSpeed) > 68)):
-                        reminderMessages = [
-                            " Do not forget to inform me about the areas you will search (or have searched), because this improves our performance.",
-                            " To complete the mission successfully, we have to be a little faster and communicate efficiently.",
-                            " Do not forget to keep me informed me about where you will search / who you found / who you will rescue, because this greatly improves efficiency."]
-                        self._reminderMessage = reminderMessages[random.randint(0, 2)]
-                    elif self._second <= 8:
-                        self._reminderMessage = ""
-                    else:
-                        reminderMessages = ["", " You are fast! Tip: Do not forget water slows you down.",
-                                            " We are doing great! Tip: You can see the blocks next to you, so two steps inside a room shows you the whole room.",
-                                            " We are doing great!", " You are fast!", ""]
-                        self._reminderMessage = reminderMessages[random.randint(0, 5)]
-                    self._sendMessage('Delivered ' + self._goalVic + ' at the drop zone.' + self._reminderMessage, 'RescueBot')
+                    self._sendMessage('Delivered ' + self._goalVic + ' at the drop zone.', 'RescueBot')
                 self._phase = Phase.FIND_NEXT_GOAL
                 self._currentDoor = None
                 self._tick = state['World']['nr_ticks']
@@ -1512,7 +1484,7 @@ class PerformanceAgent(BW4TBrain):
                     area = 'area ' + msg.split()[-1]
                     if area not in self._searchedRooms:
                         self._searchedRooms.append(area)
-                        if ((state['World']['tick_duration'] * state['World']['nr_ticks']) - self._searchSpeed) > 68:
+                        if ((state['World']['tick_duration'] * state['World']['nr_ticks']) - self._searchSpeed) > 63:
                             self._reminder = True
                             self._searchTookLong += 1
                             self._sendMessage(
@@ -1537,7 +1509,7 @@ class PerformanceAgent(BW4TBrain):
                         self._foundVictimLocs[foundVic] = {'room': loc}
                     if 'mild' in foundVic:
                         self._todo.append(foundVic)
-                    if ((state['World']['tick_duration'] * state['World']['nr_ticks']) - self._searchSpeed) > 68:
+                    if ((state['World']['tick_duration'] * state['World']['nr_ticks']) - self._searchSpeed) > 63:
                         self._reminder = True
                         self._searchTookLong += 1
                         self._sendMessage(
@@ -1562,7 +1534,7 @@ class PerformanceAgent(BW4TBrain):
                         self._foundVictimLocs[collectVic] = {'room': loc}
                     if collectVic not in self._collectedVictims:
                         self._collectedVictims.append(collectVic)
-                    if ((state['World']['tick_duration'] * state['World']['nr_ticks']) - self._searchSpeed) > 68:
+                    if ((state['World']['tick_duration'] * state['World']['nr_ticks']) - self._searchSpeed) > 63:
                         self._reminder = True
                         self._searchTookLong += 1
                         self._sendMessage(
@@ -1638,10 +1610,10 @@ class PerformanceAgent(BW4TBrain):
     def _sendMessage(self, mssg, sender):
         msg = Message(content=mssg, from_id=sender)
 
-        if (('Moving to ' not in msg.content and 'Delivered ' not in msg.content and 'Picking up ' not in msg.content) or (msg.content[0:len(msg.content) - (len(self._reminderMessage))] not in self._sendMessages)):
+        if (('Moving to ' not in msg.content) or (msg.content[0:len(msg.content) - (len(self._reminderMessage))] not in self._sendMessages)):
             if msg.content not in self.received_messages_content and 'Our score is' not in msg.content:
                 self.send_message(msg)
-                if ('Moving to ' in msg.content or 'Delivered ' in msg.content or 'Picking up ' in msg.content):
+                if ('Moving to ' in msg.content):
                     self._sendMessages.append((msg.content[0:len(msg.content) - (len(self._reminderMessage))]))
                 else:
                     self._sendMessages.append(msg.content)
