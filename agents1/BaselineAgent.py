@@ -550,7 +550,7 @@ class BaselineAgent(BW4TBrain):
                             self._phase = Phase.FIND_NEXT_GOAL
                         if self.received_messages_content and self.received_messages_content[
                             -1] == 'Remove' or self._remove:
-                            if self.received_messages_content[-1] not in self._suggestion and not self._remove:
+                            if self.received_messages_content and self.received_messages_content[-1] not in self._suggestion and not self._remove:
                                 self._ignored += 1
                                 self._updateTrust(positiveExperience=False)
                             if not self._remove:
